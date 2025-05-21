@@ -83,39 +83,6 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Using the MCP Server with cmcp Client
-
-The MCP server can be accessed using the [cmcp command-line client](https://github.com/RussellLuo/cmcp). Follow these steps:
-
-1. Install cmcp:
-   ```bash
-   pip install cmcp
-   ```
-
-2. Connect to the MCP server and call methods:
-  ```# Compile Rust code
-  echo '{
-    "code": "[filename: Cargo.toml]\n[package]\nname = \"hello_world\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\n\n[filename: src/main.rs]\nfn main() {\n    println!(\"Hello, World!\");\n}"
-  }' | cmcp call http://localhost:3000 rust-compiler compile
-
-  # Compile and fix code
-  echo '{
-    "code": "[filename: Cargo.toml]\n[package]\nname = \"hello_world\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\n\n[filename: src/main.rs]\nfn main() {\n    println!(\"Hello, World!\" // Missing closing parenthesis\n}",
-    "description": "A simple hello world program", 
-    "max_attempts": 3
-  }' | cmcp call http://localhost:3000 rust-compiler compileAndFix
-
-  # Vector search
-  echo '{
-    "query": "how to implement a web server in Rust",
-    "collection": "project_examples",
-    "limit": 3
-  }' | cmcp call http://localhost:3000 rust-compiler vectorSearch
-  ```
-3. Available MCP methods:
-  - rust-compiler.compile: Compiles Rust code
-  - rust-compiler.compileAndFix: Automatically fixes and compiles Rust code
-  - rust-compiler.vectorSearch: Searches vector database for similar examples
 ---
 
 ## 🔥 Usage
@@ -178,56 +145,104 @@ curl http://localhost:8000/project/123e4567-e89b-12d3-a456-426614174000
 
 ---
 
-## 🔧 MCP (Model-Compiler-Processor) Endpoints
+## 🔧 MCP (Model-Compiler-Processor) tools
 
-These endpoints provide direct compilation and error fixing for Rust code:
+The MCP server is available via the HTTP SSE transport via the `http://localhost:3000/sse` URL. The MCP server can be accessed using the [cmcp command-line client](https://github.com/RussellLuo/cmcp). To install the `cmcp` tool,
+
+```bash
+pip install cmcp
+```
 
 ### 🛠 Compile Rust Code
 
-**Endpoint:** `POST /mcp/compile`
+**tool:** `compile`
 
-#### 📥 Request Body:
+#### 📥 Request example:
 
-```json
-{
-  "code": "[filename: Cargo.toml]\n[package]\nname = \"hello_world\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\n\n[filename: src/main.rs]\nfn main() {\n    println!(\"Hello, World!\");\n}"
-}
+```bash
+cmcp http://localhost:3000 tools/call -d '{ \
+    "name": "compile", \
+    "arguments": { \
+        "code: "[filename: Cargo.toml]\n[package]\nname = \"hello_world\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\n\n[filename: src/main.rs]\nfn main() {\n    println!(\"Hello, World!\");\n}" \
+    } \
+}'
 ```
 
 #### 📤 Response:
 
 ```json
 {
-  "success": true,
-  "files": ["Cargo.toml", "src/main.rs"],
-  "build_output": "Build successful",
-  "run_output": "Hello, World!"
+  "meta": null,
+  "content": [
+    {
+      "type": "text",
+      "text": "success",
+      "annotations": null
+    }
+  ],
+  "isError": false
 }
 ```
 
 ### 🩹 Compile and Fix Rust Code
 
-**Endpoint:** `POST /mcp/compile-and-fix`
+**tool:** `compileAndFix`
 
-### 📥 Request Body:
+### 📥 Request example:
 
-```json
-{
-  "code": "[filename: Cargo.toml]\n[package]\nname = \"hello_world\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\n\n[filename: src/main.rs]\nfn main() {\n    println!(\"Hello, World!\" // Missing closing parenthesis\n}",
-  "description": "A simple hello world program",
-  "max_attempts": 3
-}
+```bash
+cmcp http://localhost:3000 tools/call -d '{ \
+    "name": "compileAndFix", \
+    "arguments": { \
+        "code: "[filename: Cargo.toml]\n[package]\nname = \"hello_world\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\n\n[filename: src/main.rs]\nfn main() {\n    println!(\"Hello, World!\" // Missing closing parenthesis \n}" \
+    } \
+}'
 ```
 
 ### 📤 Response:
 
 ```json
 {
-  "success": true,
-  "attempts": [...],
-  "final_files": {...},
-  "build_output": "Build successful",
-  "run_output": "Hello, World!"
+  "meta": null,
+  "content": [
+    {
+      "type": "text",
+      "text": "[filename: Cargo.toml]\n[package]\nname = \"hello_world\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[dependencies]\n\n[filename: src/main.rs]\nfn main() {\n    println!(\"Hello, World!\"); \n}",
+      "annotations": null
+    }
+  ],
+  "isError": false
+}
+```
+
+### 🎯 Generate a new project
+
+**tool:** `generate`
+
+### 📥 Request example:
+
+```bash
+cmcp http://localhost:3000 tools/call -d '{ \
+    "name": "generate", \
+    "arguments": { \
+        "description": "A command-line calculator in Rust", "requirements": "Should support addition, subtraction, multiplication, and division" \
+    } \
+}'
+```
+
+### 📤 Response:
+
+```json
+{
+  "meta": null,
+  "content": [
+    {
+      "type": "text",
+      "text": "[filename: Cargo.toml] ... [filename: src/main.rs] ... ",
+      "annotations": null
+    }
+  ],
+  "isError": false
 }
 ```
 
