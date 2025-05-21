@@ -13,13 +13,12 @@ services:
       - LLM_EMBED_SIZE=${LLM_EMBED_SIZE:-768}
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     depends_on:
       - qdrant
 
   mcp-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     environment:
       - MCP_TRANSPORT=sse
       - MCP_HOST=0.0.0.0
@@ -36,9 +35,7 @@ services:
       - qdrant
 
   mcp-proxy:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     ports:
       - "3000:3000"
     command: mcp-proxy http://mcp-server:3001/sse --port 3000 --host 0.0.0.0 --allow-origin="*"

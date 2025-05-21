@@ -26,9 +26,3 @@ COPY . .
 
 # Create necessary directories
 RUN mkdir -p output
-
-# Expose port for FastAPI
-EXPOSE 8000
-
-# Add entry point for FastAPI
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
